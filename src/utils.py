@@ -1,8 +1,7 @@
-import json
 import datetime
+import json
 import logging
-from typing import Dict, List, Any
-
+from typing import Any, Dict, List
 
 # Настройка логгеров для различных компонентов
 validate_month_format_logger = logging.getLogger("validate_month_format")
@@ -24,7 +23,7 @@ def validate_month_format(month: str) -> bool:
         True если формат корректный, иначе False
     """
     try:
-        datetime.datetime.strptime(month, '%Y-%m')
+        datetime.datetime.strptime(month, "%Y-%m")
         validate_month_format_logger.debug(f"Месяц '{month}' прошел валидацию")
         return True
     except ValueError:
@@ -57,10 +56,7 @@ def validate_limit(limit: int) -> bool:
     return True
 
 
-def filter_transactions_by_month(
-        transactions: List[Dict[str, Any]],
-        target_month: str
-) -> List[Dict[str, Any]]:
+def filter_transactions_by_month(transactions: List[Dict[str, Any]], target_month: str) -> List[Dict[str, Any]]:
     """
     Фильтрует транзакции, оставляя только те, которые относятся к целевому месяцу.
 
@@ -118,10 +114,7 @@ def round_amount(amount: float, limit: int) -> float:
     return round(difference, 2)
 
 
-def calculate_investment_for_transactions(
-        transactions: List[Dict[str, Any]],
-        limit: int
-) -> float:
+def calculate_investment_for_transactions(transactions: List[Dict[str, Any]], limit: int) -> float:
     """
     Рассчитывает общую сумму для инвесткопилки из списка транзакций.Args:
         transactions: Список транзакций
@@ -139,13 +132,11 @@ def calculate_investment_for_transactions(
             # Преобразуем сумму к числу
             if isinstance(amount, str):
                 # Очищаем строку от пробелов и символов валюты
-                clean_amount = amount.replace(' ', '').replace('₽', '').replace('RUB', '')
+                clean_amount = amount.replace(" ", "").replace("₽", "").replace("RUB", "")
                 try:
                     amount_float = float(clean_amount)
                 except ValueError:
-                    calculate_investment_logger.warning(
-                        f"Транзакция {i}: не удалось преобразовать сумму '{amount}'"
-                    )
+                    calculate_investment_logger.warning(f"Транзакция {i}: не удалось преобразовать сумму '{amount}'")
                     continue
             else:
                 amount_float = float(amount)
@@ -155,8 +146,7 @@ def calculate_investment_for_transactions(
                 investment = round_amount(abs(amount_float), limit)
                 total += investment
                 calculate_investment_logger.debug(
-                    f"Транзакция {i}: расход {abs(amount_float)} ₽, "
-                    f"в копилку: {investment} ₽"
+                    f"Транзакция {i}: расход {abs(amount_float)} ₽, " f"в копилку: {investment} ₽"
                 )
 
         except Exception as e:
@@ -186,17 +176,12 @@ def prepare_investment_response(month: str, total_investment: float, limit: int)
         "total_investment": total_investment,
         "currency": "RUB",
         "status": "success",
-        "calculation_date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "calculation_date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
     prepare_response_logger.debug(f"Подготовлен ответ: {response_data}")
 
-    return json.dumps(
-        response_data,
-        ensure_ascii=False,
-        indent=2,
-        default=str
-    )
+    return json.dumps(response_data, ensure_ascii=False, indent=2, default=str)
 
 
 def calculate_example_investment() -> Dict[str, Any]:
@@ -207,10 +192,7 @@ def calculate_example_investment() -> Dict[str, Any]:
     Returns:
         Словарь с результатами примера
     """
-    example_transaction = {
-        "Дата операции": "2024-01-15",
-        "Сумма операции": -1712
-    }
+    example_transaction = {"Дата операции": "2024-01-15", "Сумма операции": -1712}
 
     limit = 50
     amount = abs(example_transaction["Сумма операции"])
@@ -222,6 +204,5 @@ def calculate_example_investment() -> Dict[str, Any]:
         "limit": limit,
         "rounded_amount": rounded_up,
         "investment": difference,
-        "explanation": f"Покупка на {amount} ₽ округляется до {rounded_up} ₽, "
-                      f"в копилку уходит {difference} ₽"
+        "explanation": f"Покупка на {amount} ₽ округляется до {rounded_up} ₽, " f"в копилку уходит {difference} ₽",
     }

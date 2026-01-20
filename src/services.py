@@ -1,13 +1,9 @@
 import json
 import logging
-from typing import List, Dict, Any
-from utils import (
-    validate_month_format,
-    validate_limit,
-    filter_transactions_by_month,
-    calculate_investment_for_transactions,
-    prepare_investment_response
-)
+from typing import Any, Dict, List
+
+from utils import (calculate_investment_for_transactions, filter_transactions_by_month, prepare_investment_response,
+                   validate_limit, validate_month_format)
 
 # Настройка основного логгера для services.py
 logger = logging.getLogger(__name__)
@@ -30,17 +26,16 @@ def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) 
     # Валидация входных данных
     if not validate_month_format(month):
         logger.error(f"Неверный формат месяца: {month}")
-        return json.dumps({
-            "error": f"Неверный формат месяца: {month}. Ожидается 'YYYY-MM'",
-            "status": "error"
-        }, ensure_ascii=False)
+        return json.dumps(
+            {"error": f"Неверный формат месяца: {month}. Ожидается 'YYYY-MM'", "status": "error"}, ensure_ascii=False
+        )
 
     if not validate_limit(limit):
         logger.error(f"Неверный лимит: {limit}")
-        return json.dumps({
-            "error": f"Неверный лимит: {limit}. Лимит должен быть положительным и кратным 10",
-            "status": "error"
-        }, ensure_ascii=False)
+        return json.dumps(
+            {"error": f"Неверный лимит: {limit}. Лимит должен быть положительным и кратным 10", "status": "error"},
+            ensure_ascii=False,
+        )
 
     # Фильтрация транзакций по месяцу
     filtered_transactions = filter_transactions_by_month(transactions, month)
@@ -64,18 +59,9 @@ def main_services_example():
     """
     # Пример данных транзакций
     example_transactions = [
-        {
-            "Дата операции": "2024-01-15",
-            "Сумма операции": -1712
-        },
-        {
-            "Дата операции": "2024-01-20",
-            "Сумма операции": -1245
-        },
-        {
-            "Дата операции": "2024-02-01",
-            "Сумма операции": -500
-        }
+        {"Дата операции": "2024-01-15", "Сумма операции": -1712},
+        {"Дата операции": "2024-01-20", "Сумма операции": -1245},
+        {"Дата операции": "2024-02-01", "Сумма операции": -500},
     ]
 
     # Вызов основной функции

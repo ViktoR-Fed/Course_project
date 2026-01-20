@@ -2,10 +2,12 @@ import datetime
 import logging
 import os
 from typing import Optional
+
 import numpy as np
 import pandas as pd  # type: ignore[import-untyped]
 import xlsxwriter  # type: ignore[import-untyped]
 from dateutil.relativedelta import relativedelta
+
 file_path_param_r = os.path.join(os.path.dirname(__file__), "../data/operations.xlsx")
 logger = logging.getLogger("reports")
 log = os.path.join(os.path.dirname(__file__), "..", "logs", "reports.log")
@@ -63,63 +65,90 @@ def save_to_file(filename):  # type:ignore[no-untyped-def]
     filename=os.path.join(os.path.dirname(__file__), "../data/result.xlsx")
 )  # type: ignore[func-returns-value]
 def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = None) -> pd.DataFrame:
-    """Возвращает расходы по выбранной категории
-    за 3 последних месяца от заданного/текущего"""
-    transactions["Дата операции"] = pd.to_datetime(transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+    """Возвращает расходы по выбранной категории за 3 последних месяца от заданного/текущего"""
+    from dateutil.relativedelta import relativedelta
+    import datetime
+
+    # Конвертируем дату операции
+    transactions["Дата операции"] = pd.to_datetime(
+        transactions["Дата операции"],
+        format="%d.%m.%Y %H:%M:%S",
+        errors='coerce'
+    )
+
+    # Удаляем строки с некорректными датами
+    transactions = transactions.dropna(subset=["Дата операции"])
+
     logger.info("фильтрация дат и очистка категорий от пустых значений")
-    day = transactions["Дата операции"].dt.day
-    month = transactions["Дата операции"].dt.month
-    filtered_data = transactions[
-        (transactions["Дата операции"].dt.month == month) & (transactions["Дата операции"].dt.day == day)
-    ]
-    filtered_data = filtered_data.dropna(subset=["Категория"])
+
+    # Удаляем пустые категории
+    filtered_data = transactions.dropna(subset=["Категория"])
+
     logger.info("получение точки начала периода")
-    if filtered_data["Дата операции"].dt.day.isin(day).any():
-        specific_date = pd.to_datetime(str(date)).date()
-        three_months_ago = specific_date - relativedelta(months=3)
-        filtered_data_start = transactions[
-            (transactions["Дата операции"].dt.date >= three_months_ago)
-            & (transactions["Дата операции"].dt.date <= specific_date)
-        ]
+
+    if date:
+        # Если указана дата, используем ее
+        try:
+            specific_date = pd.to_datetime(date).date()
+        except:
+            # Если не удалось распарсить дату, используем сегодня
+            specific_date = datetime.datetime.today().date()
     else:
-        month_offset = datetime.datetime.today() - relativedelta(months=3)
-        current_day = datetime.datetime.today()
-        filtered_data_start = transactions[
-            transactions["Дата операции"].apply(lambda x: x >= month_offset.month)
-            & (transactions["Дата операции"].dt.day == current_day)
+        # Если дата не указана, используем сегодня
+        specific_date = datetime.datetime.today().date()
+
+    # Вычисляем дату 3 месяца назад
+    three_months_ago = specific_date - relativedelta(months=3)
+
+    # Фильтруем по периоду (последние 3 месяца)
+    filtered_data_start = filtered_data[
+        (filtered_data["Дата операции"].dt.date >= three_months_ago) &
+        (filtered_data["Дата операции"].dt.date <= specific_date)
         ]
+
     logger.info("подбор необходимых данных")
+
+    # Фильтруем по категории и отрицательным суммам
     filter_result = filtered_data_start[
-        filtered_data_start.notna().any(axis=1)  # Проверка на ненулевые значения во всех колонках
-        & (filtered_data_start["Сумма операции"] < 0)  # Сумма операции отрицательна
-        & (filtered_data_start["Категория"] == category)  # Категория равна заданной
-    ]
-    filter_result = filter_result.copy()
-    resulted = filter_result[
-        [
-            "Дата платежа",
-            "Номер карты",
-            "Статус",
-            "Сумма операции",
-            "Кэшбэк",
-            "MCC",
-            "Категория",
-            "Описание",
-            "Округление на инвесткопилку",
-            "Бонусы (включая кэшбэк)",
-        ]
-    ]
-    resulted = resulted.copy()
-    resulted["Номер карты"] = resulted["Номер карты"].apply(lambda x: x.replace("*", "") if isinstance(x, str) else x)
-    resulted["Кэшбэк"] = resulted["Кэшбэк"].fillna(round(abs(resulted["Сумма операции"]) / 100, 2))
+        (filtered_data_start["Сумма операции"] < 0) &
+        (filtered_data_start["Категория"] == category)
+        ].copy()
+
+    # Выбираем нужные колонки
+    resulted = filter_result[[
+        "Дата платежа",
+        "Номер карты",
+        "Статус",
+        "Сумма операции",
+        "Кэшбэк",
+        "MCC",
+        "Категория",
+        "Описание",
+        "Округление на инвесткопилку",
+        "Бонусы (включая кэшбэк)",
+    ]].copy()
+
+    # Обработка номеров карт
+    resulted["Номер карты"] = resulted["Номер карты"].apply(
+        lambda x: x.replace("*", "") if isinstance(x, str) else x
+    )
+
+    # Расчет кэшбэка (1% от суммы операции, если не указан)
+    resulted["Кэшбэк"] = resulted["Кэшбэк"].fillna(
+        round(abs(resulted["Сумма операции"]) / 100, 2)
+    )
+
+    # Расчет бонусов
     resulted["Бонусы (включая кэшбэк)"] = np.where(
         resulted["Бонусы (включая кэшбэк)"].isna(),
-        round(abs(resulted["Сумма операции"]) / 100, 2),  # Если NaN, присваиваем новое значение
+        round(abs(resulted["Сумма операции"]) / 100, 2),
         round(
             resulted["Бонусы (включая кэшбэк)"] + abs(resulted["Сумма операции"]) / 100,
             2,
         ),
-    )  # Иначе, складываем
+    )
+
+    # Замена бесконечностей и NaN на 0
     resulted = pd.DataFrame(resulted.replace([np.inf, -np.inf], np.nan).fillna(0))
 
     return resulted

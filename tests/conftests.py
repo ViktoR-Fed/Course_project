@@ -1,6 +1,8 @@
-import pytest
 import pandas as pd
+import pytest
+
 from utils_views import get_card
+
 
 @pytest.fixture
 def sample_dataframe():
@@ -10,7 +12,7 @@ def sample_dataframe():
         "Номер карты": ["**1234", "5678", "**1234"],
         "Сумма операции": [1000, 2000, 1500],
         "Сумма операции с округлением": [1000, 2000, 1500],
-        "Категория": ["Еда", "Транспорт", "Развлечения"]
+        "Категория": ["Еда", "Транспорт", "Развлечения"],
     }
     return pd.DataFrame(data)
 
