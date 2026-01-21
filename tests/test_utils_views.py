@@ -1,13 +1,12 @@
-import pytest
-from src.utils_views import (get_card, get_currency, get_date_period, get_path_and_period, get_stocks, get_time,
-                         get_top_transactions)
-from datetime import datetime
-import pandas as pd
-import pytest
-from unittest.mock import patch, mock_open, MagicMock
-import pandas as pd
-import pytest
 import json
+from datetime import datetime
+from unittest.mock import MagicMock, mock_open, patch
+
+import pandas as pd
+import pytest
+
+from src.utils_views import (get_card, get_currency, get_date_period, get_path_and_period, get_stocks, get_time,
+                             get_top_transactions)
 
 
 def test_get_date_period_basic():
@@ -110,19 +109,21 @@ def test_get_date_period_none():
 def test_filter_and_sort():
     """Фильтрация и сортировка данных"""
     # Создаем тестовые данные
-    test_df = pd.DataFrame({
-        "Дата операции": [
-            "2024-03-25 14:00:00",  # В периоде
-            "2024-04-01 09:00:00",  # Вне периода
-            "2024-03-10 10:00:00"  # В периоде
-        ],
-        "Сумма": [300, 400, 100],
-        "Категория": ["А", "Б", "В"]
-    })
+    test_df = pd.DataFrame(
+        {
+            "Дата операции": [
+                "2024-03-25 14:00:00",  # В периоде
+                "2024-04-01 09:00:00",  # Вне периода
+                "2024-03-10 10:00:00",  # В периоде
+            ],
+            "Сумма": [300, 400, 100],
+            "Категория": ["А", "Б", "В"],
+        }
+    )
 
     period = ["01.03.2024 00:00:00", "31.03.2024 23:59:59"]
 
-    with patch('pandas.read_excel', return_value=test_df):
+    with patch("pandas.read_excel", return_value=test_df):
         result = get_path_and_period("test.xlsx", period)
 
         # Проверяем
@@ -132,21 +133,18 @@ def test_filter_and_sort():
 
 def test_empty_result():
     """Нет данных в периоде"""
-    test_df = pd.DataFrame({
-        "Дата операции": ["2024-04-01 09:00:00"],
-        "Сумма": [100]
-    })
+    test_df = pd.DataFrame({"Дата операции": ["2024-04-01 09:00:00"], "Сумма": [100]})
 
     period = ["01.03.2024 00:00:00", "31.03.2024 23:59:59"]
 
-    with patch('pandas.read_excel', return_value=test_df):
+    with patch("pandas.read_excel", return_value=test_df):
         result = get_path_and_period("test.xlsx", period)
         assert len(result) == 0  # Пустой результат
 
 
 def test_reads_correct_sheet():
     """Чтение правильного листа Excel"""
-    with patch('pandas.read_excel') as mock_read:
+    with patch("pandas.read_excel") as mock_read:
         mock_read.return_value = pd.DataFrame({"Дата операции": []})
 
         get_path_and_period("file.xlsx", ["01.01.2024 00:00:00", "31.01.2024 23:59:59"])
@@ -157,12 +155,14 @@ def test_reads_correct_sheet():
 
 def test_1_get_card():
     """Тест get_card - исправленная версия"""
-    df = pd.DataFrame({
-        "Номер карты": ["1234****5678"],
-        "Сумма операции": [-1000],  # Отрицательная сумма операции
-        "Кэшбэк": [10.0],  # Кэшбэк
-        "Сумма операции с округлением": [1000]  # ПОЛОЖИТЕЛЬНАЯ сумма с округлением!
-    })
+    df = pd.DataFrame(
+        {
+            "Номер карты": ["1234****5678"],
+            "Сумма операции": [-1000],  # Отрицательная сумма операции
+            "Кэшбэк": [10.0],  # Кэшбэк
+            "Сумма операции с округлением": [1000],  # ПОЛОЖИТЕЛЬНАЯ сумма с округлением!
+        }
+    )
 
     result = get_card(df)
 
@@ -182,15 +182,16 @@ def test_1_get_card():
     assert card["cashback"] == 10.0  # 1% от 1000
 
 
-
 def test_2_get_top_transactions():
     """Минимальный тест get_top_transactions"""
-    df = pd.DataFrame({
-        "Дата платежа": ["01.03.2024"],
-        "Описание": ["Покупка"],
-        "Категория": ["Еда"],
-        "Сумма операции с округлением": [-500]
-    })
+    df = pd.DataFrame(
+        {
+            "Дата платежа": ["01.03.2024"],
+            "Описание": ["Покупка"],
+            "Категория": ["Еда"],
+            "Сумма операции с округлением": [-500],
+        }
+    )
 
     result = get_top_transactions(df, 1)
 
@@ -208,8 +209,8 @@ def test_3_get_currency():
     mock_response = MagicMock()
     mock_response.json.return_value = {"result": 90.0}
 
-    with patch('builtins.open', mock_open(read_data=json_data)):
-        with patch('requests.get', return_value=mock_response):
+    with patch("builtins.open", mock_open(read_data=json_data)):
+        with patch("requests.get", return_value=mock_response):
             result = get_currency("currency.json")
 
             assert result[0]["currency"] == "USD"
@@ -225,9 +226,9 @@ def test_4_get_stocks():
     mock_response = MagicMock()
     mock_response.json.return_value = {"results": [{"c": 175.5}]}
 
-    with patch('builtins.open', mock_open(read_data=json_data)):
-        with patch('requests.get', return_value=mock_response):
-            with patch('datetime.date') as mock_date:
+    with patch("builtins.open", mock_open(read_data=json_data)):
+        with patch("requests.get", return_value=mock_response):
+            with patch("datetime.date") as mock_date:
                 mock_date.today.return_value = pd.Timestamp("2024-03-15").date()
                 mock_date.side_effect = lambda *args, kwargs: pd.Timestamp(*args, kwargs).date()
 

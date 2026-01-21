@@ -1,13 +1,15 @@
 import os
+import sys
 import tempfile
+from io import StringIO
+from unittest.mock import Mock, patch
+
 import pandas as pd
 import pytest
 import xlsxwriter
-from unittest.mock import Mock, patch
-from io import StringIO
-import sys
-from src.reports import save_to_file
-from src.reports import spending_by_category
+
+from src.reports import save_to_file, spending_by_category
+
 
 # Создаем мок-функцию для тестирования декоратора
 def create_test_function():
@@ -16,9 +18,9 @@ def create_test_function():
     def sample_function():
         """Возвращает тестовые данные в формате DataFrame"""
         data = {
-            'Category': ['Food', 'Transport', 'Entertainment'],
-            'Amount': [100, 50, 200],
-            'Date': ['2024-01-01', '2024-01-02', '2024-01-03']
+            "Category": ["Food", "Transport", "Entertainment"],
+            "Amount": [100, 50, 200],
+            "Date": ["2024-01-01", "2024-01-02", "2024-01-03"],
         }
         return pd.DataFrame(data)
 
@@ -29,14 +31,14 @@ def test_decorator_creates_file():
     """Тест на создание файла"""
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Патчим os.path.dirname чтобы использовать временную директорию
-        with patch('os.path.dirname', return_value=tmp_dir):
+        with patch("os.path.dirname", return_value=tmp_dir):
             # Патчим xlsxwriter.Workbook
             mock_workbook = Mock()
             mock_worksheet = Mock()
             mock_workbook.add_worksheet.return_value = mock_worksheet
             mock_workbook.close = Mock()
 
-            with patch('xlsxwriter.Workbook', return_value=mock_workbook):
+            with patch("xlsxwriter.Workbook", return_value=mock_workbook):
                 # Создаем декорированную функцию
                 decorator = save_to_file("test_output.xlsx")
                 test_func = decorator(create_test_function())
@@ -57,18 +59,18 @@ def test_decorator_creates_file():
 def test_decorator_preserves_functionality():
     """Тест, что декоратор сохраняет оригинальную функциональность"""
     with tempfile.TemporaryDirectory() as tmp_dir:
-        with patch('os.path.dirname', return_value=tmp_dir):
-            with patch('xlsxwriter.Workbook'):
+        with patch("os.path.dirname", return_value=tmp_dir):
+            with patch("xlsxwriter.Workbook"):
                 decorator = save_to_file("test_output.xlsx")
                 test_func = decorator(create_test_function())
 
                 result = test_func()
 
                 # Проверяем, что данные возвращаются корректно
-                assert 'Category' in result.columns
-                assert 'Amount' in result.columns
-                assert 'Date' in result.columns
-                assert list(result['Category']) == ['Food', 'Transport', 'Entertainment']
+                assert "Category" in result.columns
+                assert "Amount" in result.columns
+                assert "Date" in result.columns
+                assert list(result["Category"]) == ["Food", "Transport", "Entertainment"]
 
 
 def test_decorator_writes_correct_data():
@@ -78,7 +80,7 @@ def test_decorator_writes_correct_data():
         test_filepath = os.path.join(tmp_dir, test_filename)
 
         # Патчим os.path.dirname
-        with patch('os.path.dirname', return_value=tmp_dir):
+        with patch("os.path.dirname", return_value=tmp_dir):
             # Создаем реальный Workbook для проверки записи
             decorator = save_to_file(test_filename)
             test_func = decorator(create_test_function())
@@ -107,15 +109,15 @@ def test_decorator_writes_correct_data():
 def test_decorator_error_handling():
     """Тест обработки ошибок при записи в файл"""
     with tempfile.TemporaryDirectory() as tmp_dir:
-        with patch('os.path.dirname', return_value=tmp_dir):
+        with patch("os.path.dirname", return_value=tmp_dir):
             # Создаем мок, который выбрасывает исключение
             mock_workbook = Mock()
             mock_workbook.add_worksheet.side_effect = xlsxwriter.exceptions.XlsxWriterException("Test error")
             mock_workbook.close = Mock()
 
-            with patch('xlsxwriter.Workbook', return_value=mock_workbook):
+            with patch("xlsxwriter.Workbook", return_value=mock_workbook):
                 # Перехватываем вывод в консоль
-                with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+                with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
                     decorator = save_to_file("test_output.xlsx")
                     test_func = decorator(create_test_function())
 
@@ -134,15 +136,12 @@ def test_decorator_with_arguments():
     """Тест декоратора с функцией, принимающей аргументы"""
 
     def func_with_args(category=None, limit=None):
-        data = {
-            'Category': [category or 'Test'],
-            'Amount': [limit or 100]
-        }
+        data = {"Category": [category or "Test"], "Amount": [limit or 100]}
         return pd.DataFrame(data)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        with patch('os.path.dirname', return_value=tmp_dir):
-            with patch('xlsxwriter.Workbook'):
+        with patch("os.path.dirname", return_value=tmp_dir):
+            with patch("xlsxwriter.Workbook"):
                 decorator = save_to_file("test_args.xlsx")
                 decorated_func = decorator(func_with_args)
 
@@ -150,17 +149,18 @@ def test_decorator_with_arguments():
                 result = decorated_func(category="Food", limit=500)
 
                 # Проверяем результат
-                assert result.iloc[0]['Category'] == 'Food'
-                assert result.iloc[0]['Amount'] == 500
+                assert result.iloc[0]["Category"] == "Food"
+                assert result.iloc[0]["Amount"] == 500
 
 
 # Тест для проверки логирования
 def test_logging_in_decorator(caplog):
     """Тест логирования в декораторе"""
     import logging
+
     with tempfile.TemporaryDirectory() as tmp_dir:
-        with patch('os.path.dirname', return_value=tmp_dir):
-            with patch('xlsxwriter.Workbook'):
+        with patch("os.path.dirname", return_value=tmp_dir):
+            with patch("xlsxwriter.Workbook"):
                 # Устанавливаем уровень логирования
                 caplog.set_level(logging.INFO)
 
@@ -173,14 +173,17 @@ def test_logging_in_decorator(caplog):
                 # Проверяем логи
                 assert "Формирование файла" in caplog.text
                 assert "Сформирован файл" in caplog.text
-import pandas as pd
-import numpy as np
+
+
 import datetime
-from dateutil.relativedelta import relativedelta
-import pytest
-from unittest.mock import patch, Mock
-import tempfile
 import os
+import tempfile
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
+from dateutil.relativedelta import relativedelta
 
 
 def test_empty_category_result(sample_transactions):
@@ -192,9 +195,16 @@ def test_empty_category_result(sample_transactions):
 
     # Проверяем, что колонки присутствуют
     expected_columns = [
-        "Дата платежа", "Номер карты", "Статус", "Сумма операции",
-        "Кэшбэк", "MCC", "Категория", "Описание",
-        "Округление на инвесткопилку", "Бонусы (включая кэшбэк)"
+        "Дата платежа",
+        "Номер карты",
+        "Статус",
+        "Сумма операции",
+        "Кэшбэк",
+        "MCC",
+        "Категория",
+        "Описание",
+        "Округление на инвесткопилку",
+        "Бонусы (включая кэшбэк)",
     ]
     assert all(col in result.columns for col in expected_columns)
 
@@ -273,7 +283,7 @@ def test_inf_nan_handling():
         "Категория": ["Супермаркеты", "Супермаркеты"],
         "Описание": ["Test 1", "Test 2"],
         "Округление на инвесткопилку": [np.nan, np.inf],
-        "Бонусы (включая кэшбэк)": [np.inf, -np.inf]
+        "Бонусы (включая кэшбэк)": [np.inf, -np.inf],
     }
 
     df = pd.DataFrame(data)

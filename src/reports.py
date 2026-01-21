@@ -66,14 +66,10 @@ def save_to_file(filename):  # type:ignore[no-untyped-def]
 )  # type: ignore[func-returns-value]
 def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = None) -> pd.DataFrame:
     """Возвращает расходы по выбранной категории за 3 последних месяца от заданного/текущего"""
-    from dateutil.relativedelta import relativedelta
-    import datetime
 
     # Конвертируем дату операции
     transactions["Дата операции"] = pd.to_datetime(
-        transactions["Дата операции"],
-        format="%d.%m.%Y %H:%M:%S",
-        errors='coerce'
+        transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S", errors="coerce"
     )
 
     # Удаляем строки с некорректными датами
@@ -102,41 +98,38 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
 
     # Фильтруем по периоду (последние 3 месяца)
     filtered_data_start = filtered_data[
-        (filtered_data["Дата операции"].dt.date >= three_months_ago) &
-        (filtered_data["Дата операции"].dt.date <= specific_date)
-        ]
+        (filtered_data["Дата операции"].dt.date >= three_months_ago)
+        & (filtered_data["Дата операции"].dt.date <= specific_date)
+    ]
 
     logger.info("подбор необходимых данных")
 
     # Фильтруем по категории и отрицательным суммам
     filter_result = filtered_data_start[
-        (filtered_data_start["Сумма операции"] < 0) &
-        (filtered_data_start["Категория"] == category)
-        ].copy()
+        (filtered_data_start["Сумма операции"] < 0) & (filtered_data_start["Категория"] == category)
+    ].copy()
 
     # Выбираем нужные колонки
-    resulted = filter_result[[
-        "Дата платежа",
-        "Номер карты",
-        "Статус",
-        "Сумма операции",
-        "Кэшбэк",
-        "MCC",
-        "Категория",
-        "Описание",
-        "Округление на инвесткопилку",
-        "Бонусы (включая кэшбэк)",
-    ]].copy()
+    resulted = filter_result[
+        [
+            "Дата платежа",
+            "Номер карты",
+            "Статус",
+            "Сумма операции",
+            "Кэшбэк",
+            "MCC",
+            "Категория",
+            "Описание",
+            "Округление на инвесткопилку",
+            "Бонусы (включая кэшбэк)",
+        ]
+    ].copy()
 
     # Обработка номеров карт
-    resulted["Номер карты"] = resulted["Номер карты"].apply(
-        lambda x: x.replace("*", "") if isinstance(x, str) else x
-    )
+    resulted["Номер карты"] = resulted["Номер карты"].apply(lambda x: x.replace("*", "") if isinstance(x, str) else x)
 
     # Расчет кэшбэка (1% от суммы операции, если не указан)
-    resulted["Кэшбэк"] = resulted["Кэшбэк"].fillna(
-        round(abs(resulted["Сумма операции"]) / 100, 2)
-    )
+    resulted["Кэшбэк"] = resulted["Кэшбэк"].fillna(round(abs(resulted["Сумма операции"]) / 100, 2))
 
     # Расчет бонусов
     resulted["Бонусы (включая кэшбэк)"] = np.where(

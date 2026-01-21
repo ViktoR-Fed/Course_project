@@ -2,8 +2,8 @@ import json
 import logging
 from typing import Any, Dict, List
 
-from utils import (calculate_investment_for_transactions, filter_transactions_by_month, prepare_investment_response,
-                   validate_limit, validate_month_format)
+from src.utils import (calculate_investment_for_transactions, filter_transactions_by_month,
+                       prepare_investment_response, validate_limit, validate_month_format)
 
 # Настройка основного логгера для services.py
 logger = logging.getLogger(__name__)
